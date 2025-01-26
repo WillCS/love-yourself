@@ -3,6 +3,7 @@ local debug_flag = false
 local constants = require('constants')
 local unix_utils = require('unix')
 local utils = require('utils')
+local cli = require ('cli')
 
 local Target = {
   raw = {},
@@ -103,8 +104,84 @@ local function find_love()
   end
 end
 
+local function parse_args()
+  local arg_parser = cli.ArgParser:new()
+
+  arg_parser:register_arg_matcher({
+    type = 'flag',
+    name = 'help',
+    alias = 'h',
+    description = 'Show this help message',
+  })
+
+  arg_parser:register_arg_matcher({
+    type = 'string',
+    name = 'game_root',
+    alias = 'r',
+    description = 'The root directory for your love2d game',
+  })
+
+  arg_parser:register_arg_matcher({
+    type = 'string',
+    name = 'target',
+    values = { 'raw', 'linux', 'macos', 'windows' },
+    alias = 't',
+    description = 'The platform to build for. Must be one of: raw, linux, macos, windows',
+    validator = function (value)
+      return value == 'raw' or value == 'linux' or value == 'macos' or value == 'windows'
+    end
+  })
+
+  arg_parser:register_arg_matcher({
+    type = 'string',
+    name = 'name',
+    alias = 'n',
+    description = 'The name of the output file, before a file extension is added',
+  })
+
+  arg_parser:register_arg_matcher({
+    type = 'string',
+    name = 'output',
+    alias = 'o',
+    description = 'The directory to output the build to',
+  })
+
+  arg_parser:register_arg_matcher({
+    type = 'string',
+    name = 'love',
+    alias = 'l',
+    description = 'The location of the love app, on macos. If not provided, will attempt to find it',
+  })
+
+  arg_parser:register_arg_matcher({
+    type = 'flag',
+    name = 'debug',
+    alias = 'd',
+    description = 'Enable debug mode',
+  })
+
+  local status, result = pcall(function () return arg_parser:parse(arg) end)
+
+  if status then
+    for k in pairs(result) do
+      if (k == 'help') then
+        print(arg_parser:generate_help_message())
+        os.exit(0)
+      end
+    end
+
+    return result
+  else
+    print(result)
+    print('Run with --help for usage information')
+    os.exit(1)
+  end
+end
+
 local function run()
   utils.init()
+
+  local runtime_params = parse_args()
 
   -- input dir, target, output filename, love location, debug
   local root_dir = arg[1] or '.'
@@ -117,4 +194,4 @@ local function run()
   build(root_dir, target, file_name, love_location)
 end
 
-run()
+parse_args()
