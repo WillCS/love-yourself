@@ -1,9 +1,7 @@
 local module = {}
 
 function module.exec(command)
-  debug_flag = debug_flag or false
-
-  if debug_flag then
+  if debug then
     print(command)
     return os.execute(command)
   else

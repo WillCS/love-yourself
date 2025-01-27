@@ -1,6 +1,23 @@
 local constants = require('constants')
 local utils = require('utils')
-local unix_utils = require('unix')
+local files = require('files')
+
+local function find_love()
+  if utils.is_unix() then
+    error('Not implemented')
+    local handle = io.popen('which love', 'r')
+    if handle == nil then
+      error('Could not find love executable. Please specify where to find love.app')
+    end
+
+    local result = handle:read("l")
+    handle:close()
+
+    print(result)
+  else
+    error('MacOS love.app location must be specified when building for MacOS on another platform')
+  end
+end
 
 local function update_plist(location)
   local plist_file = io.open(location, "r");
@@ -18,22 +35,31 @@ local function update_plist(location)
   error('Not implemented')
 end
 
-local function build(file_name, love_file_path, love_location)
+local function build(file_name, love_file_path, love_location, output_location)
+  love_location = love_location or find_love()
   -- copy the love app to the temp dir
-  unix_utils.exec('cp -R ' .. love_location .. ' ' .. constants.TEMP_DIR_NAME .. '/')
+  files.copy(love_location, constants.TEMP_DIR_NAME)
+
+  local game_app_file_path = utils.path(constants.TEMP_DIR_NAME, file_name .. '.app')
 
   -- rename it to the desired name
-  unix_utils.exec('mv ' .. constants.TEMP_DIR_NAME .. '/love.app ' .. constants.TEMP_DIR_NAME .. '/' .. file_name .. '.app')
+  files.rename(
+    utils.path(constants.TEMP_DIR_NAME, 'love.app'),
+    game_app_file_path
+  )
 
   -- move the raw love file inside
-  unix_utils.exec('mv ' .. love_file_path .. ' ' .. constants.TEMP_DIR_NAME .. '/' .. file_name .. '.app/Contents/Resources/')
+  files.move(
+    love_file_path,
+    utils.path(game_app_file_path, 'Contents', 'Resources')
+  )
 
   -- update Info.plist
-  local plist_location = utils.path(constants.TEMP_DIR_NAME, file_name .. '.app', 'Contents', 'Info.plist')
+  local plist_location = utils.path(game_app_file_path, 'Contents', 'Info.plist')
   update_plist(plist_location)
 
   -- move the finished app file to the desired output location
-  error('Not implemented')
+  files.move(game_app_file_path, output_location)
 end
 
 return build

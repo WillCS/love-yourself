@@ -1,9 +1,7 @@
-local debug_flag = false
-
 local constants = require('constants')
-local unix_utils = require('unix')
 local utils = require('utils')
 local cli = require ('cli')
+local files = require('files')
 
 local Target = {
   raw = {},
@@ -12,43 +10,26 @@ local Target = {
   windows = {},
 }
 
-local function zip(root_dir, file_name)
-  if utils.is_unix() then
-    unix_utils.exec('zip -9 -r ' .. file_name .. ' ' .. root_dir)
-  else
-    error('Not implemented')
-  end
-end
-
 local function make_temp_dir()
-  if utils.is_unix() then
-    unix_utils.exec('mkdir '.. constants.TEMP_DIR_NAME)
-  else
-    error('Not implemented')
-  end
+  files.create_directory(constants.TEMP_DIR_NAME)
 end
 
 local function cleanup_temp_dir()
-  if utils.is_unix() then
-    unix_utils.exec('rm -rf '.. constants.TEMP_DIR_NAME)
-  else
-    error('Not implemented')
-  end
+  files.delete_directory(constants.TEMP_DIR_NAME)
 end
 
 
 local function create_love_file(root_dir, file_name)
   if utils.is_unix() then
     local love_file_name = utils.path(constants.TEMP_DIR_NAME, file_name .. '.love')
-    print(love_file_name)
-    zip(root_dir, love_file_name)
+    files.create_archive(root_dir, love_file_name)
     return love_file_name
   else
     error('Not implemented')
   end
 end
 
-local function build(root_dir, target, file_name, love_location)
+local function build(root_dir, target, file_name, love_location, output_location)
   -- create temp directory
   make_temp_dir()
 
@@ -57,15 +38,19 @@ local function build(root_dir, target, file_name, love_location)
 
   if target == Target.raw then
     -- move the raw love file to the specified output location
-    error('Not implemented')
+    files.move(love_file_path, output_location)
+
   elseif target == Target.linux then
     error('Not implemented')
+
   elseif target == Target.macos then
     local build_macos = require('macos')
 
     build_macos(file_name, love_file_path, love_location)
+
   elseif target == Target.windows then
     error('Not implemented')
+    
   end
 
   -- cleanup temp directory
@@ -84,23 +69,6 @@ local function parseTarget(target_string)
     return Target.windows
   else
     error('Invalid build target: ' .. target_string)
-  end
-end
-
-local function find_love()
-  if utils.is_unix() then
-    error('Not implemented')
-    local handle = io.popen('which love', 'r')
-    if handle == nil then
-      error('Could not find love executable')
-    end
-
-    local result = handle:read("l")
-    handle:close()
-
-    print(result)
-  else
-    error('Not implemented')
   end
 end
 
@@ -181,17 +149,17 @@ end
 local function run()
   utils.init()
 
-  local runtime_params = parse_args()
+  local args = parse_args()
 
   -- input dir, target, output filename, love location, debug
-  local root_dir = arg[1] or '.'
-  local target = parseTarget(arg[2])
-  local file_name = arg[3] or 'game'
-  local love_location = arg[4] or '/Applications/love.app' -- find_love()
-  utils.declare('debug_flag', false)
-  -- debug_flag = arg[5] == 'debug'
+  local root_dir = args['game_root'] or '.'
+  local target = parseTarget(args['target'] or 'raw')
+  local file_name = args['name'] or 'game'
+  local love_location = args['love'] or nil
+  local output_location = args['output'] or '.'
+  utils.declare('debug_flag', args['debug'] or false)
 
-  build(root_dir, target, file_name, love_location)
+  build(root_dir, target, file_name, love_location, output_location)
 end
 
-parse_args()
+run()
