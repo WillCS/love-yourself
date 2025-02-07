@@ -46,6 +46,7 @@ local function build(root_dir, target, file_name, love_location, output_location
   elseif target == Target.macos then
     local build_macos = require('macos')
 
+    print(love_location)
     build_macos(file_name, love_file_path, love_location)
 
   elseif target == Target.windows then
@@ -155,7 +156,7 @@ local function run()
   local root_dir = args['game_root'] or '.'
   local target = parseTarget(args['target'] or 'raw')
   local file_name = args['name'] or 'game'
-  local love_location = args['love'] or nil
+  local love_location = args['love'] or '/Applications/love.app' --nil
   local output_location = args['output'] or '.'
   utils.declare('debug_flag', args['debug'] or false)
 
